@@ -4,7 +4,7 @@ Usine à agents. PowerShell pur, zéro dépendance.
 
 ## Structure
 
-```
+```md
 Alpha/
 ├── create/create.ps1      # Point d'entrée : bootstrappe un projet
 ├── lib/                   # Socle partagé
