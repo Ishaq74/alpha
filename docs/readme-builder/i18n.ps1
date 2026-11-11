@@ -1,44 +1,42 @@
-# i18n.ps1 — chaînes du README, deux langues : en, fr
-# Ajouter une langue = ajouter une entrée dans $Langs et ses traductions.
+# i18n.ps1 — traductions externes optionnelles
+# Le builder ne contient AUCUN dictionnaire embarqué.
+# Si docs/readme-builder/i18n/<lang>.json existe, il est chargé.
+# Sinon, les en-têtes restent dans la langue par défaut (en).
+# La description n'est JAMAIS remplie par le builder.
 
-$Langs = @('en', 'fr')
-
-$I18n = @{
-    projectName = @{ en = 'Alpha'; fr = 'Alpha' }
-    description = @{
-        en = 'A universal project bootstrap and operations toolkit. Pure PowerShell core, zero dependencies, presence-based detection.'
-        fr = 'Un outil universel de bootstrap et d''opérations de projet. Cœur en PowerShell pur, zéro dépendance, détection par présence.'
-    }
-    subtitle = @{
-        en = 'Create projects, validate agents, manage databases, send email — each primitive is a tool, a check, and a test at once.'
-        fr = 'Créer des projets, valider des agents, gérer des bases, envoyer des emails — chaque primitive est à la fois un outil, un check et un test.'
-    }
-    toc = @{ en = 'Table of Contents'; fr = 'Sommaire' }
-    sections = @{
-        overview      = @{ en = 'Overview'; fr = 'Vue d''ensemble' }
-        techStack     = @{ en = 'Tech Stack'; fr = 'Stack technique' }
-        gettingStarted = @{ en = 'Getting Started'; fr = 'Démarrage' }
-        designSystem  = @{ en = 'Design System'; fr = 'Design System' }
-        database      = @{ en = 'Database'; fr = 'Base de données' }
-        authentication = @{ en = 'Authentication & Security'; fr = 'Authentification et sécurité' }
-        content       = @{ en = 'Content & CMS'; fr = 'Contenu et CMS' }
-        media         = @{ en = 'Media'; fr = 'Médias' }
-        email         = @{ en = 'Email & Notifications'; fr = 'Email et notifications' }
-        internationalisation = @{ en = 'Internationalisation'; fr = 'Internationalisation' }
-        cicd          = @{ en = 'CI/CD & Quality'; fr = 'CI/CD et qualité' }
-    }
-    subsections = @{
-        prerequisites = @{ en = 'Prerequisites'; fr = 'Prérequis' }
-        installation  = @{ en = 'Installation'; fr = 'Installation' }
-        envVars       = @{ en = 'Environment Variables'; fr = 'Variables d''environnement' }
-        aliasTs       = @{ en = 'TypeScript Aliases'; fr = 'Alias TypeScript' }
-    }
-}
+$I18nDir = Join-Path $PSScriptRoot 'i18n'
+$Loaded = @{}
 
 function Get-RBI18n {
-    param([string]$Section, [string]$Lang = 'en')
-    if ($I18n.ContainsKey($Section) -and $I18n[$Section].ContainsKey($Lang)) {
-        return $I18n[$Section][$Lang]
+    param(
+        [string]$Section,
+        [string]$Lang = 'en'
+    )
+    if (-not $Loaded.ContainsKey($Lang)) {
+        $Loaded[$Lang] = @{}
+        $f = Join-Path $I18nDir "$Lang.json"
+        if (Test-Path -LiteralPath $f) {
+            try {
+                $Loaded[$Lang] = (Get-Content -LiteralPath $f -Raw | ConvertFrom-Json)
+            } catch { }
+        }
     }
-    return ''
+    $obj = $Loaded[$Lang]
+    if ($null -eq $obj) { return $Section }
+    $parts = $Section -split '\.'
+    $cur = $obj
+    foreach ($p in $parts) {
+        if ($cur.PSObject.Properties.Name -contains $p) {
+            $cur = $cur.$p
+        } else {
+            return $Section
+        }
+    }
+    if ($cur -is [string]) { return $cur }
+    return $Section
+}
+
+function Test-RBI18nLoaded {
+    param([string]$Lang = 'en')
+    return (Test-Path -LiteralPath (Join-Path $I18nDir "$Lang.json"))
 }

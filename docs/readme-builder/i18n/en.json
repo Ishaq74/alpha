@@ -1,0 +1,15 @@
+{
+  "sections": {
+    "description": "Description",
+    "toc": "Table of Contents",
+    "structure": "Structure",
+    "commands": "Commands",
+    "license": "License",
+    "database": "Database",
+    "smtp": "Email & SMTP",
+    "create": "Project Creation",
+    "lib": "Shared Core",
+    "ai": "AI Agents",
+    "tests": "Tests"
+  }
+}

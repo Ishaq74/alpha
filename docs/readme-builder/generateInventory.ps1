@@ -1,84 +1,62 @@
-# generateInventory.ps1 — inventaire du projet par présence
-# Aucun if par techno : on scanne, on construit le motif, on rapporte.
+# generateInventory.ps1 — inventaire par présence, zéro hypothèse de framework
 
 . (Join-Path $PSScriptRoot 'utils.ps1')
 
 function Get-RBInventory {
+    $top = Get-RBTopLevel
+
     $inv = [ordered]@{
-        HasPackageJson = Test-Path -LiteralPath $Paths.PackageJson
-        HasEnvExample  = Test-Path -LiteralPath $Paths.EnvExample
-        HasTsconfig    = Test-Path -LiteralPath $Paths.Tsconfig
-        HasSrc         = Test-Path -LiteralPath $Paths.Src
-        HasComponents  = Test-Path -LiteralPath $Paths.Components
-        HasCore        = Test-Path -LiteralPath $Paths.Core
-        HasModules     = Test-Path -LiteralPath $Paths.Modules
-        HasStyles      = Test-Path -LiteralPath $Paths.Styles
-        HasAssets      = Test-Path -LiteralPath $Paths.Assets
-        HasDatabase    = Test-Path -LiteralPath $Paths.DatabaseRoot
-        HasDbInfra     = Test-Path -LiteralPath (Join-Path $Paths.DatabaseRoot 'infra')
-        HasDbCommands  = Test-Path -LiteralPath (Join-Path $Paths.DatabaseRoot 'commands')
-        HasDrizzle     = Test-Path -LiteralPath (Join-Path $Paths.DatabaseRoot 'drizzle.ts')
-        HasSmpt        = Test-Path -LiteralPath $Paths.SmptRoot
-        HasSmptProviders = Test-Path -LiteralPath (Join-Path $Paths.SmptRoot 'providers')
-        HasSmptTemplates = Test-Path -LiteralPath (Join-Path $Paths.SmptRoot 'templates')
-        HasSmptSend    = Test-Path -LiteralPath (Join-Path $Paths.SmptRoot 'send.ts')
-        HasCreate      = Test-Path -LiteralPath $Paths.Create
-        HasLib         = Test-Path -LiteralPath $Paths.LibPs
-        HasAi          = Test-Path -LiteralPath $Paths.Ai
-        HasAiAgents    = Test-Path -LiteralPath (Join-Path $Paths.Ai 'agents')
-        HasOpencode    = Test-Path -LiteralPath (Join-Path $Root '.opencode')
-        HasDocs        = Test-Path -LiteralPath $Paths.Docs
-        HasTests       = Test-Path -LiteralPath $Paths.Tests
-        HasGithub      = Test-Path -LiteralPath $Paths.Github
-        HasPublic      = Test-Path -LiteralPath $Paths.Public
-        HasMedia       = Test-Path -LiteralPath $Paths.Media
-        HasActions     = Test-Path -LiteralPath $Paths.Actions
-        HasPages       = Test-Path -LiteralPath $Paths.Pages
-        HasLayouts     = Test-Path -LiteralPath $Paths.Layouts
-        HasI18nDir     = Test-Path -LiteralPath $Paths.I18nDir
-        HasSchemas     = Test-Path -LiteralPath $Paths.Schemas
-        HasLogs        = Test-Path -LiteralPath $Paths.Logs
+        TopLevel       = $top
+        Runtime        = @()
+        PackageManager = @()
+        Languages      = @()
+        Domains        = @()
     }
 
-    # Détection runtime / gestionnaire de paquets par présence de binaires
-    $inv.Runtime = @()
-    foreach ($cmd in @('node', 'bun', 'deno', 'php', 'python', 'python3', 'ruby', 'go', 'rustc', 'java')) {
+    foreach ($cmd in @('node','bun','deno','php','python','python3','ruby','go','rustc','java','powershell','pwsh')) {
         if (Get-Command $cmd -ErrorAction SilentlyContinue) { $inv.Runtime += $cmd }
     }
-    $inv.PackageManager = @()
-    foreach ($cmd in @('pnpm', 'npm', 'yarn', 'bun', 'composer', 'pip', 'pip3', 'cargo', 'go')) {
+
+    foreach ($cmd in @('pnpm','npm','yarn','bun','composer','pip','pip3','cargo','go','gem')) {
         if (Get-Command $cmd -ErrorAction SilentlyContinue) { $inv.PackageManager += $cmd }
     }
 
-    # Lecture package.json si présent
-    $inv.PackageName = ''
-    $inv.PackageScripts = @()
-    if ($inv.HasPackageJson) {
-        $raw = Read-RBFile $Paths.PackageJson
-        try {
-            $pkg = $raw | ConvertFrom-Json
-            $inv.PackageName = $pkg.name
-            $inv.PackageScripts = @($pkg.scripts.PSObject.Properties.Name)
-        } catch { }
-    }
-
-    # Moteurs de base détectés par présence de dossiers infra
-    $inv.DbEngines = @()
-    $infraDir = Join-Path $Paths.DatabaseRoot 'infra'
-    if (Test-Path -LiteralPath $infraDir) {
-        Get-ChildItem -LiteralPath $infraDir -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            $inv.DbEngines += $_.Name.ToLowerInvariant()
+    $exts = @{}
+    $queue = [System.Collections.Generic.Queue[string]]::new()
+    $queue.Enqueue($Root)
+    $seen = 0
+    while ($queue.Count -gt 0 -and $seen -lt 500) {
+        $dir = $queue.Dequeue()
+        $seen++
+        Get-ChildItem -LiteralPath $dir -Force -ErrorAction SilentlyContinue | Where-Object {
+            $_.Name -notmatch '^\.' -and $_.Name -ne 'node_modules' -and $_.Name -ne 'dist' -and $_.Name -ne '.git'
+        } | ForEach-Object {
+            if ($_.PSIsContainer) {
+                $queue.Enqueue($_.FullName)
+            } else {
+                $e = $_.Extension.ToLowerInvariant()
+                if ($e) {
+                    if (-not $exts.ContainsKey($e)) { $exts[$e] = 0 }
+                    $exts[$e]++
+                }
+            }
         }
     }
-
-    # Providers SMTP détectés par présence
-    $inv.SmptProviders = @()
-    $provDir = Join-Path $Paths.SmptRoot 'providers'
-    if (Test-Path -LiteralPath $provDir) {
-        Get-ChildItem -LiteralPath $provDir -File -ErrorAction SilentlyContinue | ForEach-Object {
-            $inv.SmptProviders += $_.BaseName.ToLowerInvariant()
-        }
+    $map = @{
+        '.ts'='TypeScript'; '.js'='JavaScript'; '.tsx'='TypeScript'; '.jsx'='JavaScript'
+        '.py'='Python'; '.php'='PHP'; '.rb'='Ruby'; '.go'='Go'; '.rs'='Rust'
+        '.java'='Java'; '.c'='C'; '.cpp'='C++'; '.cs'='C#'; '.swift'='Swift'
+        '.kt'='Kotlin'; '.ps1'='PowerShell'; '.sh'='Shell'; '.sql'='SQL'
+        '.html'='HTML'; '.css'='CSS'; '.json'='JSON'; '.yml'='YAML'; '.yaml'='YAML'
+        '.md'='Markdown'; '.toml'='TOML'
     }
+    foreach ($e in $exts.Keys) {
+        if ($map.ContainsKey($e)) { $inv.Languages += $map[$e] }
+    }
+    $inv.Languages = @($inv.Languages | Select-Object -Unique | Sort-Object)
+
+    $skip = @('.opencode','node_modules','dist','.git','docs')
+    $inv.Domains = @($top | Where-Object { $skip -notcontains $_ -and (Test-Path -LiteralPath (Join-Path $Root $_) -PathType Container) })
 
     return $inv
 }

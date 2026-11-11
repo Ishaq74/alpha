@@ -1,4 +1,4 @@
-# helpers.ps1 — slugs GitHub, liens de langue
+# helpers.ps1 — slug GitHub, TOC immuable
 
 function Get-RBSlug {
     param([string]$Str)
@@ -9,13 +9,16 @@ function Get-RBSlug {
     return $s.Trim('-')
 }
 
-function Get-RBLangLinks {
-    param([string]$CurrentLang)
-    $langs = @('en', 'fr')
-    $links = foreach ($lang in $langs) {
-        $suffix = if ($lang -eq 'en') { '' } else { ".${lang}" }
-        $label = if ($lang -eq $CurrentLang) { "**$($lang.ToUpper())**" } else { $lang.ToUpper() }
-        "[$label](./README${suffix}.md)"
+function Get-RBToc {
+    param([string]$Body)
+    $lines = [System.Collections.Generic.List[string]]::new()
+    foreach ($line in ($Body -split "`n")) {
+        if ($line -match '^##\s+(.+)$') {
+            $title = $Matches[1].Trim()
+            $anchor = Get-RBSlug $title
+            $lines.Add("- [$title](#$anchor)")
+        }
     }
-    return ($links -join ' | ')
+    if ($lines.Count -eq 0) { return '' }
+    return ($lines -join "`n")
 }
