@@ -1,4 +1,4 @@
-[CmdletBinding()]
+[CmdLetBinding()]
 param(
     [Parameter(Position = 0)]
     [string]$Name,
@@ -13,8 +13,13 @@ param(
     [string]$LogFile
 )
 
+# ---------------------------------------------------------------------------
+# Socle partagé
+# ---------------------------------------------------------------------------
 
-
+. (Join-Path $PSScriptRoot "..\lib\state.ps1")
+. (Join-Path $PSScriptRoot "..\lib\logging.ps1")
+. (Join-Path $PSScriptRoot "..\lib\helpers.ps1")
 
 # ---------------------------------------------------------------------------
 # Extensions
@@ -45,8 +50,8 @@ function Export-State {
     $env:CREATE_NAME       = $State.Name
     $env:CREATE_DIR        = $State.Dir
     $env:CREATE_HAS_GIT    = $State.GitLocal
-    $env:CREATE_HAS_GITHUB = $State.GitHub
-    $env:CREATE_GITHUB_URL = $State.GitHubUrl
+    $env:CREATE_HAS_GHUB   = $State.GitHub
+    $env:CREATE_GHUB_URL   = $State.GitHubUrl
 }
 
 function Load-Extensions {
