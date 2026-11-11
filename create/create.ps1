@@ -8,10 +8,21 @@ param(
     [switch]$GitHub,
     [switch]$Public,
     [switch]$VsCode,
+    [switch]$AI,
     [switch]$DryRun,
     [string]$ExtensionsDir,
     [string]$LogFile
 )
+$null = $Name
+$null = $Yes
+$null = $Git
+$null = $GitHub
+$null = $Public
+$null = $VsCode
+$null = $AI
+$null = $DryRun
+$null = $ExtensionsDir
+$null = $LogFile
 
 # ---------------------------------------------------------------------------
 # Socle partagé
@@ -54,7 +65,7 @@ function Export-State {
     $env:CREATE_GHUB_URL   = $State.GitHubUrl
 }
 
-function Load-Extensions {
+function Load-Extension {
     $dir = $State.ExtensionsDir
     if (-not $dir) {
         $dir = Join-Path (Split-Path -Parent $PSCommandPath) "extensions"
@@ -88,83 +99,90 @@ function Invoke-Hooks {
 # ---------------------------------------------------------------------------
 
 function Phase-Directory {
-    Write-Step "Création du dossier"
+    Write-Step "Creation du dossier"
     $name = $State.Name
+    $target = Join-Path (Get-Location).Path $name
 
-    if (Test-Path $name) {
-        if (-not (Test-Path $name -PathType Container)) {
-            Die "'$name' existe déjà et n est pas un dossier."
+    if (Test-Path $target) {
+        if (-not (Test-Path $target -PathType Container)) {
+            Die "'$name' existe deja et n est pas un dossier."
         }
-        Write-Warn "Le dossier '$name' existe déjà."
-        if (-not (Ask-YesNo "Entrer dans ce dossier ?")) { Die "Annulé." }
+        Write-Warn "Le dossier '$name' existe deja."
+        if (-not (Confirm-YesNo "Entrer dans ce dossier ?")) { Die "Annule." }
     } else {
-        Invoke-Run { New-Item -ItemType Directory -Path $name -Force | Out-Null }
-        Write-Ok "Dossier créé."
+        Invoke-Run { New-Item -ItemType Directory -Path $target -Force | Out-Null }
+        Write-Ok "Dossier cree."
     }
 
-    Set-Location $name
-    $State.Dir = (Get-Location).Path
-    Write-Ok "Répertoire de travail : $($State.Dir)"
+    if (-not $State.DryRun) {
+        Set-Location $target
+        $State.Dir = (Get-Location).Path
+    } else {
+        $State.Dir = $target
+        Write-Info "DRY-RUN: repertoire cible : $($State.Dir)"
+    }
+    Write-Ok "Repertoire de travail : $($State.Dir)"
     Invoke-Hooks "after_directory"
 }
 
 function Phase-Git {
-    Write-Step "Initialisation Git"
     if (-not (Test-Command "git")) {
         Write-Warn "git n est pas disponible."
         return
     }
 
-    if (Test-Path .git) {
-        Write-Warn "Un dépôt Git existe déjà."
-        if (Ask-YesNo "Supprimer .git et recommencer ?") {
-            Invoke-Run { Remove-Item -Recurse -Force .git }
-            Write-Ok ".git supprimé."
+    $dir = $State.Dir
+    $gitDir = Join-Path $dir ".git"
+
+    if (Test-Path $gitDir) {
+        Write-Warn "Un depot Git existe deja."
+        if (Confirm-YesNo "Supprimer .git et recommencer ?") {
+            Invoke-Run { Remove-Item -Recurse -Force $gitDir }
+            Write-Ok ".git supprime."
         }
     }
 
-    if (-not (Test-Path .git)) {
+    if (-not (Test-Path $gitDir)) {
+        if (-not $State.DryRun) { Push-Location $dir }
         Invoke-Run { git init -b main }
-        if ($LASTEXITCODE -ne 0) { Die "git init a échoué." }
-        Write-Ok "Dépôt initialisé."
+        if (-not $State.DryRun) {
+            if ($LASTEXITCODE -ne 0) { Pop-Location; Die "git init a echoue." }
+            Pop-Location
+        }
+        Write-Ok "Depot initialise."
     }
 
-    if (-not (Test-Path .gitignore)) {
-        @"
-.DS_Store
-.env
-.env.*
-*.log
-.vscode/
-node_modules/
-__pycache__/
-"@ | Invoke-Run { Set-Content -Path .gitignore -Encoding UTF8 }
-        Write-Ok ".gitignore créé."
+    $gitignore = Join-Path $dir ".gitignore"
+    if (-not (Test-Path $gitignore)) {
+        $content = ".DS_Store`n.env`n.env.*`n*.log`n.vscode/`nnode_modules/`n__pycache__/`n"
+        Invoke-Run { Set-Content -Path $gitignore -Value $content -Encoding UTF8 }
+        Write-Ok ".gitignore cree."
     }
 
-    if (-not (Test-Path README.md)) {
-        @"
-# $($State.Name)
-
-Créé par create.
-"@ | Invoke-Run { Set-Content -Path README.md -Encoding UTF8 }
-        Write-Ok "README.md créé."
+    $readme = Join-Path $dir "README.md"
+    if (-not (Test-Path $readme)) {
+        $content = "# $($State.Name)`n`nCree par create.`n"
+        Invoke-Run { Set-Content -Path $readme -Value $content -Encoding UTF8 }
+        Write-Ok "README.md cree."
     }
 
-    Invoke-Run { git add .gitignore README.md 2>$null }
-    $status = git diff --cached --quiet 2>$null
-    if (-not $State.DryRun -and $LASTEXITCODE -ne 0) {
-        git commit -m "Initial commit"
-        if ($LASTEXITCODE -ne 0) { Write-Warn "Le commit initial a échoué." }
+    if (-not $State.DryRun) {
+        Push-Location $dir
+        Invoke-Run { git add .gitignore README.md 2>$null }
+        git diff --cached --quiet 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            git commit -m "Initial commit" 2>$null
+            if ($LASTEXITCODE -ne 0) { Write-Warn "Le commit initial a echoue." }
+        }
+        Pop-Location
     }
 
-    if (Test-Path .git) {
+    if (Test-Path $gitDir) {
         $State.GitLocal = $true
-        Write-Ok "Git local prêt."
+        Write-Ok "Git local pret."
         Invoke-Hooks "after_git"
     }
 }
-
 function Phase-GitHub {
     Write-Step "Création GitHub"
     if (-not $State.GitLocal) { return }
@@ -179,7 +197,7 @@ function Phase-GitHub {
     }
 
     $visibility = "private"
-    if ($State.ForcePublic -or (Ask-YesNo "Dépôt public ?")) {
+    if ($State.ForcePublic -or (Confirm-YesNo "Dépôt public ?")) {
         $visibility = "public"
     }
 
@@ -188,7 +206,7 @@ function Phase-GitHub {
     gh repo view $repo 2>$null
     if ($LASTEXITCODE -eq 0) {
         Write-Warn "Le dépôt GitHub '$repo' existe déjà."
-        if (Ask-YesNo "Le lier comme origin et pousser ?") {
+        if (Confirm-YesNo "Le lier comme origin et pousser ?") {
             $url = gh repo view $repo --json url -q .url
             Invoke-Run { git remote remove origin 2>$null }
             Invoke-Run { git remote add origin "$url.git" }
@@ -217,6 +235,26 @@ function Phase-GitHub {
             } else {
                 Write-Warn "Le remote n est pas joignable."
             }
+        }
+    }
+}
+
+function Phase-AI {
+    Write-Step "Import des agents IA"
+    $src = Join-Path (Split-Path -Parent $PSCommandPath) "..\..\ai\agents"
+    if (-not (Test-Path -LiteralPath $src)) {
+        Write-Warn "Dossier ai/agents introuvable : $src"
+        return
+    }
+    $dst = Join-Path $State.Dir ".opencode\agents"
+    Invoke-Run { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+    Get-ChildItem -Path $src -Filter *.md -ErrorAction SilentlyContinue | ForEach-Object {
+        $target = Join-Path $dst $_.Name
+        if (-not $State.DryRun) {
+            Copy-Item -LiteralPath $_.FullName -Destination $target -Force
+            Write-Ok "Agent importe : $($_.Name)"
+        } else {
+            Write-Info "DRY-RUN: copie $($_.FullName) -> $target"
         }
     }
 }
@@ -267,27 +305,33 @@ if ($State.Name -notmatch '^[a-zA-Z0-9._-]{1,64}$') {
     Die "Nom invalide. Autorisé : lettres, chiffres, . _ - (1-64 caractères)."
 }
 
-Load-Extensions
+Load-Extension
 
 # Avertissement si déjà dans un dépôt Git
 git rev-parse --is-inside-work-tree 2>$null
 if ($LASTEXITCODE -eq 0) {
     Write-Warn "Le répertoire courant est déjà dans un dépôt Git."
-    if (-not (Ask-YesNo "Continuer ?")) { Die "Annulé." }
+    if (-not (Confirm-YesNo "Continuer ?")) { Die "Annulé." }
 }
 
 Phase-Directory
 
-if ($State.ForceGit -or (Ask-YesNo "Initialiser un dépôt Git local ?")) {
+if ($State.ForceGit -or (Confirm-YesNo "Initialiser un dépôt Git local ?")) {
     Phase-Git
 }
 
-if ($State.GitLocal -and ($State.ForceGitHub -or (Ask-YesNo "Créer le dépôt sur GitHub ?"))) {
+if ($State.GitLocal -and ($State.ForceGitHub -or (Confirm-YesNo "Créer le dépôt sur GitHub ?"))) {
     Phase-GitHub
 }
 
-if ($State.ForceVsCode -or (Ask-YesNo "Ouvrir dans VS Code ?")) {
+if ($State.ForceVsCode -or (Confirm-YesNo "Ouvrir dans VS Code ?")) {
     Phase-VsCode
 }
 
+if ($State.ForceAI -or (Confirm-YesNo "Importer les agents IA ?")) {
+    Phase-AI
+}
+
 Phase-Summary
+
+

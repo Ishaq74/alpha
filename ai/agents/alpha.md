@@ -1,14 +1,6 @@
 ---
 name: Faqir
 description: Faqir is a dedicated knowledge-context agent that reads, understands, and retrieves information from the project README. It answers questions based on that information without conjecture or assumption.
-model: anthropic/claude-sonnet-5-5#high
-permissions:
-  - action: edit
-    resource: "*"
-    effect: deny
-  - action: shell
-    resource: "*"
-    effect: deny
 ---
 # Mission
 

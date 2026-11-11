@@ -1,4 +1,4 @@
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
 $State = @{
     Name         = $Name
     Dir          = ""
@@ -12,6 +12,7 @@ $State = @{
     ForceGitHub  = $GitHub.IsPresent
     ForcePublic  = $Public.IsPresent
     ForceVsCode  = $VsCode.IsPresent
+    ForceAI      = $AI.IsPresent
     ExtensionsDir = $ExtensionsDir
     LogFile      = $LogFile
 }

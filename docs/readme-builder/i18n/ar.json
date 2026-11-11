@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "description": "الوصف",
+    "toc": "جدول المحتويات",
+    "structure": "الهيكل",
+    "commands": "الأوامر",
+    "license": "الترخيص",
+    "database": "قاعدة البيانات",
+    "smtp": "البريد الإلكتروني و SMTP",
+    "create": "إنشاء المشروع",
+    "lib": "النواة المشتركة",
+    "ai": "وكلاء الذكاء الاصطناعي",
+    "tests": "الاختبارات"
+  },
+  "subsections": {
+    "files": "الملفات",
+    "components": "المكونات",
+    "stylesTokens": "الأنماط والرموز",
+    "tests": "الاختبارات",
+    "providers": "المزودون",
+    "templates": "القوالب",
+    "commands": "الأوامر",
+    "locales": "اللغات المدعومة",
+    "routing": "التوجيه",
+    "pipeline": "خط أنابيب CI/CD",
+    "accessibility": "إمكانية الوصول والأداء",
+    "tokens": "الرموز",
+    "styleComponents": "مكونات النمط",
+    "baseStyles": "الأنماط الأساسية"
+  }
+}
+

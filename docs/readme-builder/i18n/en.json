@@ -1,6 +1,7 @@
 {
   "sections": {
     "description": "Description",
+    "what": "What",
     "toc": "Table of Contents",
     "structure": "Structure",
     "commands": "Commands",

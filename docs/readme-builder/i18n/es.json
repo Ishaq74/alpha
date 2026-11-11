@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "description": "Descripcion",
+    "what": "Que",
+    "toc": "Tabla de contenidos",
+    "structure": "Estructura",
+    "commands": "Comandos",
+    "license": "Licencia",
+    "database": "Base de datos",
+    "smtp": "Email y SMTP",
+    "create": "Creacion del proyecto",
+    "lib": "Nucleo compartido",
+    "ai": "Agentes IA",
+    "tests": "Tests"
+  },
+  "subsections": {
+    "files": "Archivos",
+    "components": "Componentes",
+    "stylesTokens": "Estilos y tokens",
+    "tests": "Tests",
+    "providers": "Proveedores",
+    "templates": "Plantillas",
+    "commands": "Comandos",
+    "locales": "Locales soportadas",
+    "routing": "Enrutamiento",
+    "pipeline": "Pipeline CI/CD",
+    "accessibility": "Accesibilidad y rendimiento",
+    "tokens": "Tokens",
+    "styleComponents": "Componentes de estilo",
+    "baseStyles": "Estilos base"
+  }
+}

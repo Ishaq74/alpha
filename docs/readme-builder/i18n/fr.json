@@ -1,0 +1,32 @@
+{
+  "sections": {
+    "description": "Description",
+    "what": "Quoi",
+    "toc": "Table des matieres",
+    "structure": "Structure",
+    "commands": "Commandes",
+    "license": "Licence",
+    "database": "Base de donnees",
+    "smtp": "Email et SMTP",
+    "create": "Creation du projet",
+    "lib": "Noyau partage",
+    "ai": "Agents IA",
+    "tests": "Tests"
+  },
+  "subsections": {
+    "files": "Fichiers",
+    "components": "Composants",
+    "stylesTokens": "Styles et jetons",
+    "tests": "Tests",
+    "providers": "Fournisseurs",
+    "templates": "Modeles",
+    "commands": "Commandes",
+    "locales": "Locales supportees",
+    "routing": "Routage",
+    "pipeline": "Pipeline CI/CD",
+    "accessibility": "Accessibilite et performance",
+    "tokens": "Jetons",
+    "styleComponents": "Composants de style",
+    "baseStyles": "Styles de base"
+  }
+}
