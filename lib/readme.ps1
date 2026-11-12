@@ -1,8 +1,6 @@
-# ---------------------------------------------------------------------------
-# lib/readme.ps1 - Socle du readme-builder (pur PowerShell, zéro dépendance)
-# Fonctions réutilisables : scan, inventaire, sections, i18n, slug, TOC.
-# La racine cible est stockée dans $script:RBRoot (définie par le point d'entrée).
-# ---------------------------------------------------------------------------
+# lib/readme.ps1 - Socle du readme-builder (pur PowerShell, zero dependance)
+# Fonctions reutilisables : scan, inventaire, sections, i18n, slug, TOC.
+# La racine cible est stockee dans $script:RBRoot (definie par le point d'entree).
 
 $script:RBRoot = $null
 $script:RBI18nLoaded = @{}
@@ -113,7 +111,6 @@ function Get-RBToc {
 # i18n
 $script:RBI18nDir = $null
 function Set-RBI18nDir {
-    [CmdletBinding(SupportsShouldProcess)]
     param([string]$Path)
     $script:RBI18nDir = $Path
 }
@@ -228,6 +225,7 @@ function Get-RBInventory {
 # Sections
 function Generate-RBTitle {
     param($Inv, [string]$Lang)
+    $null = $Inv
     $null = $Lang
     $root = Get-RBRoot
     $name = 'Project'
@@ -271,6 +269,16 @@ function Generate-RBTocSection {
     return "## $h`n`n$toc`n`n"
 }
 
+function Generate-RBStructureSection {
+    param($Inv, [string]$Lang, [int]$MaxDepth = 3)
+    $null = $Inv
+    $null = $Lang
+    $null = $MaxDepth
+    $tree = Get-RBTree -Dir (Get-RBRoot) -MaxDepth $MaxDepth
+    if (-not $tree) { return '' }
+    $h = Get-RBI18n 'sections.structure' $Lang
+    return "## $h`n`n````n$tree````n`n"
+}
 
 function Generate-RBCommandsSection {
     param($Inv, [string]$Lang)
@@ -293,7 +301,7 @@ function Generate-RBCommandsSection {
     if ($rows.Count -eq 0) { return '' }
     $h = Get-RBI18n 'sections.commands' $Lang
     $table = "| Command | Description |`n|---------|-------------|`n" + ($rows -join "`n")
-    return "## $h`n`n$($table -join "`n")`n`n"
+    return "## $h`n`n$table`n`n"
 }
 
 function Generate-RBLicenseSection {
@@ -314,41 +322,26 @@ function Generate-RBDomainSection {
     $root = Get-RBRoot
     $files = Get-RBFiles $Domain
     $children = Get-RBChildNames $Domain
-    if ($files.Count -eq 0 -and $children.Count -eq 0) { return ' }
+    if ($files.Count -eq 0 -and $children.Count -eq 0) { return '' }
 
-    $docDir = Join-Path $root $Domain
-    $tempDir = $docDir
-    $docDir = "$tempDir\docs"
-    $whoPath = $docDir
-    $whoPath = "$whoPath\who.md"
+    $docDir = Join-Path $root "$Domain/docs"
+    $who = ''
+    $what = ''
+    $how = ''
+    $whoPath = Join-Path $docDir 'who.md'
     if (Test-Path -LiteralPath $whoPath) {
-        $sep = "\\"
         $who = (Read-RBFile $whoPath).Trim()
-        $who = ''
     }
-    $what = if (Test-Path -LiteralPath (Join-Path $docDir 'what.md')) { (Read-RBFile (Join-Path $docDir 'what.md')).Trim() } else { '' }
     $whatPath = Join-Path $docDir 'what.md'
     if (Test-Path -LiteralPath $whatPath) {
         $what = (Read-RBFile $whatPath).Trim()
-    } else {
-        $what = ''
     }
     $howPath = Join-Path $docDir 'how.md'
     if (Test-Path -LiteralPath $howPath) {
         $how = (Read-RBFile $howPath).Trim()
-    } else {
-        $how = ''
     }
-        $what = (Read-RBFile (Join-Path $docDir 'what.md')).Trim()
-    } else {
-        $what = ''
-    }
-    if (Test-Path -LiteralPath (Join-Path $docDir 'how.md')) {
-        $how = (Read-RBFile (Join-Path $docDir 'how.md')).Trim()
-    } else {
-        $how = ''
-    }
-    $domainReadme = Join-Path $root (Join-Path $Domain 'README.md')
+
+    $domainReadme = Join-Path $root "$Domain/README.md"
     if (Test-Path -LiteralPath $domainReadme) {
         $content = (Read-RBFile $domainReadme).Trim()
         if ($content) { return "$content`n`n" }
@@ -371,15 +364,30 @@ function Generate-RBDomainSection {
     }
     return $md
 }
+
 function Generate-RBDatabaseSection {
     param($Inv, [string]$Lang)
+    $null = $Inv
+    $null = $Lang
     $root = Get-RBRoot
     if ($Inv.Domains -notcontains 'database') { return '' }
 
     $docDir = Join-Path $root 'database/docs'
-    $who = if (Test-Path -LiteralPath (Join-Path $docDir 'who.md')) { (Read-RBFile (Join-Path $docDir 'who.md')).Trim() } else { '' }
-    $what = if (Test-Path -LiteralPath (Join-Path $docDir 'what.md')) { (Read-RBFile (Join-Path $docDir 'what.md')).Trim() } else { '' }
-    $how = if (Test-Path -LiteralPath (Join-Path $docDir 'how.md')) { (Read-RBFile (Join-Path $docDir 'how.md')).Trim() } else { '' }
+    $who = ''
+    $what = ''
+    $how = ''
+    $whoPath = Join-Path $docDir 'who.md'
+    if (Test-Path -LiteralPath $whoPath) {
+        $who = (Read-RBFile $whoPath).Trim()
+    }
+    $whatPath = Join-Path $docDir 'what.md'
+    if (Test-Path -LiteralPath $whatPath) {
+        $what = (Read-RBFile $whatPath).Trim()
+    }
+    $howPath = Join-Path $docDir 'how.md'
+    if (Test-Path -LiteralPath $howPath) {
+        $how = (Read-RBFile $howPath).Trim()
+    }
 
     $domainReadme = Join-Path $root 'database/README.md'
     if (Test-Path -LiteralPath $domainReadme) {
@@ -393,14 +401,6 @@ function Generate-RBDatabaseSection {
         if ($what) { $md += "$what`n`n" }
         if ($how) { $md += "### How`n`n$how`n`n" }
         return $md
-    }
-
-
-    # Si database/ a son propre README.md, l'integrer
-    $domainReadme = Join-Path $root 'database/README.md'
-    if (Test-Path -LiteralPath $domainReadme) {
-        $content = (Read-RBFile $domainReadme).Trim()
-        if ($content) { return "$content`n`n" }
     }
 
     $h = Get-RBI18n 'sections.database' $Lang
@@ -462,23 +462,11 @@ function Generate-RBDatabaseSection {
     return $md
 }
 
-function Generate-RBStructureSection {
-    param(
-        $Inv,
-        [string]$Lang,
-        [int]$MaxDepth = 3
-    )
-    $tree = Get-RBTree -Dir (Get-RBRoot) -MaxDepth $MaxDepth
-    if (-not $tree) { return '' }
+function Generate-RBAllSections {
+    param($Inv, [string]$Lang, [int]$MaxDepth = 3)
     $null = $Inv
     $null = $Lang
     $null = $MaxDepth
-    $h = Get-RBI18n 'sections.structure' $Lang
-    return "## $h`n`n````n$tree````n`n"
-}
-
-function Generate-RBAllSections {
-    param($Inv, [string]$Lang, [int]$MaxDepth = 3)
 
     $body = ''
     $body += Generate-RBTitle -Inv $inv -Lang $Lang
@@ -512,13 +500,10 @@ function Generate-RBAllSections {
     }
 
     # Normalisation markdown
-    # MD022 : headings entoures de lignes vides
     $body = [regex]::Replace($body, '(?<!\n)\n(#{1,6}\s)', "`n`n`$1")
     $body = [regex]::Replace($body, '(#{1,6}\s[^\n]+)\n(?!\n)', "`$1`n`n")
-    # MD032 : listes entourees de lignes vides
     $body = [regex]::Replace($body, '(?<!\n)\n(- |\* |\d+\. )', "`n`n`$1")
     $body = [regex]::Replace($body, '(- |\* |\d+\. [^\n]+)\n(?!\n|- |\* |\d+\. )', "`$1`n`n")
-    # MD060 : tableaux avec espaces autour des pipes (normalisation par ligne)
     $body = [regex]::Replace($body, '(?m)^\|[-\s|]+\|$', { param($m)
         $cols = $m.Value -split '\|'
         $out = ''
@@ -528,5 +513,6 @@ function Generate-RBAllSections {
         $out += '|'
         return $out
     })
+
     return $body
 }
